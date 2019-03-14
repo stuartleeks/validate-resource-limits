@@ -13,14 +13,27 @@ import (
 )
 
 func main() {
+	log.Printf("validate-resource-limits\n")
+	port := "8080"
+
+	// TODO allow overriding these from args!
+	appCertPath := "/app/certs/cert.pem"
+	appKeyPath := "/app/certs/key.pem"
+
 	server := http.Server{
-		Addr: ":8080",
+		Addr: fmt.Sprintf(":%s", port),
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/validate", validate)
 
 	server.Handler = mux
+
+	log.Printf("Starting server (listening on %s)\n", port)
+	if err := server.ListenAndServeTLS(appCertPath, appKeyPath); err != nil {
+		log.Printf("Failed to start server: %v", err)
+	}
+	log.Printf("Exiting\n")
 }
 
 func validate(w http.ResponseWriter, r *http.Request) {

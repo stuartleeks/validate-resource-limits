@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: validateresourcelimits
+spec:
+  selector:
+    app: validateresourcelimits
+  ports:
+  - port: 443
+    targetPort: 8080
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: validateresourcelimits
+spec:
+  selector:
+    matchLabels:
+      app: validateresourcelimits
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: validateresourcelimits
+    spec:
+      containers:
+      - name: validateresourcelimits
+        image: stuartleeks/validate-resource-limits
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+          - name: webhook-certs
+            mountPath: /app/certs
+      volumes:
+        - name: webhook-certs
+          secret:
+            secretName: validateresourcelimits
+---
+# https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validate-resource-limits
+webhooks:
+  - name: validate-resource-limits.example.com
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - pods
+    clientConfig:
+      service:
+        namespace: default
+        name: validateresourcelimits
+        path: /validate
+      caBundle: "$CABUNDLE"

@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: validateresourcelimits
+spec:
+  selector:
+    app: validateresourcelimits
+  ports:
+  - port: 443
+    targetPort: 8080
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: validateresourcelimits
+spec:
+  selector:
+    matchLabels:
+      app: validateresourcelimits
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: validateresourcelimits
+    spec:
+      containers:
+      - name: validateresourcelimits
+        image: stuartleeks/validate-resource-limits
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+          - name: webhook-certs
+            mountPath: /app/certs
+      volumes:
+        - name: webhook-certs
+          secret:
+            secretName: validateresourcelimits
+---
+# https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validate-resource-limits
+webhooks:
+  - name: validate-resource-limits.example.com
+    rules:
+      - apiGroups:
+          - ""
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - pods
+    clientConfig:
+      service:
+        namespace: default
+        name: validateresourcelimits
+        path: /validate
+      caBundle: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMzakNDQWNZQ0NRRGJCZlltSVVKaTFEQU5CZ2txaGtpRzl3MEJBUTBGQURBeE1Rc3dDUVlEVlFRR0V3SlYKU3pFUU1BNEdBMVVFQ0F3SFVtVmhaR2x1WnpFUU1BNEdBMVVFQnd3SFVtVmhaR2x1WnpBZUZ3MHhPVEF6TVRNeApOekUwTkRGYUZ3MHhPVEEwTVRJeE56RTBOREZhTURFeEN6QUpCZ05WQkFZVEFsVkxNUkF3RGdZRFZRUUlEQWRTClpXRmthVzVuTVJBd0RnWURWUVFIREFkU1pXRmthVzVuTUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEEKTUlJQkNnS0NBUUVBcjZneFlYMnhucTdsMmFyMG4zOXBYVlB5TWdJUUdYa3I5SjVNck03SEhQK1draFNGKzdlVwpyaDlKcDU2Tlh3a21vdVhIQ0xzWmNLTTFyeitoUnJONzBackVxNVBLQnNUMG5MMG1BNEhxK2xKMW9kKzVCWlpDClM2QVhONmRPVUdZM3A2RnNUSkVhdGpHWUtWeTNjYlpyOUxFL3RIaWl5NmptRDcxVHppZFF3ekJucGpVVk1mUlEKUG5aanhuQTN1cEs0eExVak9kajJ0RVl3clM0MkErbWpsSW1sZWdrZDQ5bEtzTFl5cSs5c3N4ZjQ5clBpdTkyOQpMWkVPWS9yWGY1bmhFN21zZjJDWGJQbi9FRXdUd1JmUWg1c2ZhQVFobm1wRE4wSlJvMjZvOEk1UGxUL0poWXJrCml2NVhYV3YzRlBmcy9QcTZITSsvZEJxRisxU1RDa2w4d3dJREFRQUJNQTBHQ1NxR1NJYjNEUUVCRFFVQUE0SUIKQVFCVVBmTWU0YlBDQTZrMzU0c1pMZ1VmTmlrMGFBdVVLbHhJVnZBbHhob3VXMDZGNElMRWFFL1dtL1pWcy9CTgptVlRmcmRJT3h3SjU5aE9oMmdaVzkyeUNOSDUyZ0ZmWFlKN3ZZZU41blBQdjFVeW9MTVo3VmN0ZWpZUHBHeE1MCnZlb2YwZEh5eWppSUlFa3ZkeTBoNmM5SlJFR0dqZmVPdDNtZmE4akY0TW83b0N5WVFsa3YyV0NJWUNKeENVUGQKV25RSldWZ2k3SmJkOUFHWmRROWIrbXVOOVJlaDVGVUR1QTFhOU1yL0Z2ZnkxVFUzNWpadVFXRXkxZXNxdk1ZSQpGZ1J0VmZIbUorVjdYR0Y4bDZPT2tuRDNXWXdKSS8wRENSVUpjRnJpN1B2QzJVVmYzZURRL0ozYlFvNFU5MVFvClFWKzBxd011Q3B4QTF6dEFxT3NoL3liagotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg=="

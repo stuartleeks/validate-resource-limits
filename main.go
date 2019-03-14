@@ -40,13 +40,13 @@ func validate(w http.ResponseWriter, r *http.Request) {
 	var body []byte
 	if r.Body == nil {
 		log.Printf("Missing body\n")
-		http.Error(w, "Missing body!", http.StatusBadRequest)
+		http.Error(w, "Missing body", http.StatusBadRequest)
 		return
 	}
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Failed to read body\n")
-		http.Error(w, "Failed to read body!", http.StatusBadRequest)
+		http.Error(w, "Failed to read body", http.StatusBadRequest)
 		return
 	}
 	body = data
@@ -63,30 +63,46 @@ func validate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unable to Unmarshal content", http.StatusBadRequest)
 		return
 	}
+
+	log.Printf("Validating pod: %s:%s ...", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
+	failureMessage := ""
 	for _, container := range pod.Spec.Containers {
 		cpuLimit := container.Resources.Limits[v1.ResourceCPU]
 		if cpuLimit.IsZero() {
-			log.Printf("Missing CPU limit for container '%s'\n", container.Name)
-			admissionReviewResponse := v1beta1.AdmissionReview{
-				Response: &v1beta1.AdmissionResponse{
-					Allowed: false,
-					Result: &metav1.Status{
-						Message: fmt.Sprintf("Missing CPU limit for container '%s'", container.Name),
-					},
+			message := fmt.Sprintf("Missing CPU limit for container '%s:%s:%s'\n", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name, container.Name)
+			log.Print(message)
+			failureMessage += message
+		}
+		memoryLimit := container.Resources.Limits[v1.ResourceMemory]
+		if memoryLimit.IsZero() {
+			message := fmt.Sprintf("Missing Memory limit for container '%s:%s:%s'\n", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name, container.Name)
+			log.Print(message)
+			failureMessage += message
+		}
+	}
+
+	if failureMessage == "" {
+		log.Printf("Validated pod: %s:%s", pod.ObjectMeta.Namespace, pod.ObjectMeta.Name)
+	} else {
+		admissionReviewResponse := v1beta1.AdmissionReview{
+			Response: &v1beta1.AdmissionResponse{
+				Allowed: false,
+				Result: &metav1.Status{
+					Message: failureMessage,
 				},
-			}
-			response, err := json.Marshal(admissionReviewResponse)
-			if err != nil {
-				log.Printf("Failed to marshal response\n")
-				http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
-				return
-			}
-			_, err = w.Write(response)
-			if err != nil {
-				log.Printf("Failed to write response\n")
-				http.Error(w, "Failed to write response", http.StatusInternalServerError)
-				return
-			}
+			},
+		}
+		response, err := json.Marshal(admissionReviewResponse)
+		if err != nil {
+			log.Printf("Failed to marshal response\n")
+			http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+			return
+		}
+		_, err = w.Write(response)
+		if err != nil {
+			log.Printf("Failed to write response\n")
+			http.Error(w, "Failed to write response", http.StatusInternalServerError)
+			return
 		}
 	}
 }

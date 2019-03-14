@@ -1,10 +1,10 @@
 # validate-resource-limits
 
+This project is a sample Kubernetes validating admission controller that verifies that all pods being deployed have resources limits (for CPU and memory) specified.
+
 ## Steps to deploy
 
 ### Build the image
-
-*** TODO (build, update manifest)
 
 ```bash
 docker build -t stuartleeks/validate-resource-limits .

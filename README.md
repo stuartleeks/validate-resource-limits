@@ -1,6 +1,6 @@
 # validate-resource-limits
 
-This project is a sample Kubernetes validating admission controller that verifies that all pods being deployed have resources limits (for CPU and memory) specified.
+This project is a sample Kubernetes [validating admission controller](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) that verifies that all pods being deployed have resources limits (for CPU and memory) specified.
 
 ## Steps to deploy
 
